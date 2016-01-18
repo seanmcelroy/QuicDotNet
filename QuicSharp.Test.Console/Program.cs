@@ -1,11 +1,11 @@
-﻿namespace QuicSharp.Test.Console
+﻿namespace QuicDotNet.Test.Console
 {
     class Program
     {
         static void Main(string[] args)
         {
-            var conn = new Connection();
-            conn.Connect();
+            var conn = new QuicClient();
+            conn.Connect("www.google.com", 443);
         }
     }
 }

@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.24720.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuicDotNet.Test.Console", "QuicSharp.Test.Console\QuicDotNet.Test.Console.csproj", "{45BC577E-1612-423F-A212-9CF6CB347599}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuicDotNet", "QuicDotNet\QuicDotNet.csproj", "{FAED49B1-C397-471D-95D1-DA034DAFEF22}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuicDotNet.Test.Unit", "QuicDotNet.Test.Unit\QuicDotNet.Test.Unit.csproj", "{A3A2D3C4-CEDA-4940-98BE-F226A689C2DE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{45BC577E-1612-423F-A212-9CF6CB347599}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{45BC577E-1612-423F-A212-9CF6CB347599}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{45BC577E-1612-423F-A212-9CF6CB347599}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{45BC577E-1612-423F-A212-9CF6CB347599}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FAED49B1-C397-471D-95D1-DA034DAFEF22}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FAED49B1-C397-471D-95D1-DA034DAFEF22}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FAED49B1-C397-471D-95D1-DA034DAFEF22}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FAED49B1-C397-471D-95D1-DA034DAFEF22}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3A2D3C4-CEDA-4940-98BE-F226A689C2DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3A2D3C4-CEDA-4940-98BE-F226A689C2DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3A2D3C4-CEDA-4940-98BE-F226A689C2DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3A2D3C4-CEDA-4940-98BE-F226A689C2DE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
