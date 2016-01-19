@@ -36,6 +36,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Numerics" />
   </ItemGroup>
   <Choose>
     <When Condition="('$(VisualStudioVersion)' == '10.0' or '$(VisualStudioVersion)' == '') and '$(TargetFrameworkVersion)' == 'v3.5'">
@@ -54,7 +55,9 @@
     <Compile Include="Messages\ClientHandshakeMessageTest.cs" />
     <Compile Include="Messages\MessageLibrary.cs" />
     <Compile Include="Frames\StreamFrameTest.cs" />
+    <Compile Include="Packets\Fnv1aHashTest.cs" />
     <Compile Include="Packets\PacketLibrary.cs" />
+    <Compile Include="Packets\PacketTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

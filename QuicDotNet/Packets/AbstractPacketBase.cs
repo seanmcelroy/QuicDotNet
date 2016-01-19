@@ -2,6 +2,12 @@
 {
     using System;
     using System.Diagnostics;
+    using System.Globalization;
+    using System.Linq;
+    using System.Numerics;
+    using System.Text;
+
+    using JetBrains.Annotations;
 
     public abstract class AbstractPacketBase
     {
@@ -21,9 +27,44 @@
 
         protected ulong ConnectionId { get; private set; }
 
-        protected static byte[] PublicHeader(uint? version, ulong? connectionId, ulong packetNumber)
+        public static byte[] Fnv1A128Hash(byte[] bytes)
         {
-            var header = new byte[1 + (connectionId.HasValue ? 8 : 0) + (version.HasValue ? 4 : 0) + 6];
+            var modValue = BigInteger.Parse("100000000000000000000000000000000", NumberStyles.AllowHexSpecifier);
+            var fnvPrime = BigInteger.Parse("0000000001000000000000000000013B", NumberStyles.AllowHexSpecifier);
+            var fnvOffsetBasis = BigInteger.Parse("6C62272E07BB014262B821756295C58D", NumberStyles.AllowHexSpecifier);
+
+            var hash = fnvOffsetBasis;
+
+            foreach (var t in bytes)
+            {
+                unchecked
+                {
+                    hash ^= t;
+                    hash = hash * fnvPrime % modValue;
+                }
+            }
+
+            // QUIC changed this from 16 to 12.
+            return hash.ToByteArray().Take(12).ToArray();
+        }
+
+        protected static byte[] PublicHeader([CanBeNull] string version, ulong? connectionId, ulong packetNumber)
+        {
+            // Packet number
+            int pnLength;
+            {
+                if (packetNumber <= byte.MaxValue)
+                    /* No-op, no need to apply 0x00 */
+                    pnLength = 1;
+                else if (packetNumber <= ushort.MaxValue)
+                    pnLength = 2;
+                else if (packetNumber <= uint.MaxValue)
+                    pnLength = 4;
+                else
+                    pnLength = 6;
+            }
+
+            var header = new byte[1 + (connectionId.HasValue ? 8 : 0) + (!string.IsNullOrWhiteSpace(version) ? 4 : 0) + pnLength];
 
             // Public Flags
             var next = 1;
@@ -45,10 +86,10 @@
             }
 
             // Quic Version
-            if (version.HasValue)
+            if (!string.IsNullOrWhiteSpace(version))
             {
                 header[0] ^= 0x01;
-                var versionBytes = BitConverter.GetBytes(version.Value);
+                var versionBytes = Encoding.ASCII.GetBytes(version);
                 header[next] ^= versionBytes[0];
                 header[next + 1] ^= versionBytes[1];
                 header[next + 2] ^= versionBytes[2];
@@ -58,33 +99,21 @@
 
             // Packet number
             {
-                int pnLength;
                 if (packetNumber <= byte.MaxValue)
                 {
                     /* No-op, no need to apply 0x00 */
-                    pnLength = 1;
                 }
                 else if (packetNumber <= ushort.MaxValue)
-                {
                     header[0] ^= 0x10;
-                    pnLength = 2;
-                }
                 else if (packetNumber <= uint.MaxValue)
-                {
                     header[0] ^= 0x20;
-                    pnLength = 4;
-                }
                 else
-                {
                     header[0] ^= 0x30;
-                    pnLength = 6;
-                }
 
                 var pnBytes = BitConverter.GetBytes(packetNumber);
-                Array.Copy(pnBytes, Math.Max(0, pnBytes.Length - 6), header, next, pnLength);
+                Array.Copy(pnBytes, 0, header, next, pnLength);
             }
-
-
+            
             // All QUIC packets on the wire begin with a common header sized between 2 and 19 bytes.
             Debug.Assert(header.Length >= 2 && header.Length <= 19);
 

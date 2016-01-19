@@ -9,7 +9,7 @@
 
     public class QuicClient
     {
-        public const uint QUIC_VERSION = 81485053;
+        public const string QUIC_VERSION = "Q025";
 
         private bool versionAgreed;
 

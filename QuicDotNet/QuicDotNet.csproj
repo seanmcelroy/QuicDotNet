@@ -36,6 +36,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Numerics" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -45,9 +46,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Frames\AbstractFrameBase.cs" />
+    <Compile Include="Frames\PaddingFrame.cs" />
     <Compile Include="Frames\StreamFrame.cs" />
     <Compile Include="Message.cs" />
     <Compile Include="Messages\ClientHandshakeMessage.cs" />
+    <Compile Include="Messages\MessageTags.cs" />
     <Compile Include="MultiplexedTransfer.cs" />
     <Compile Include="MultiplexingManager.cs" />
     <Compile Include="Packets\AbstractPacketBase.cs" />

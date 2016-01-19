@@ -52,7 +52,7 @@ namespace QuicDotNet.Frames
 
         private byte? _olen;
 
-        public override uint GetMetadataLength()
+        public uint GetMetadataLength()
         {
             if (this._streamId <= byte.MaxValue)
                 this._slen = 0x00;

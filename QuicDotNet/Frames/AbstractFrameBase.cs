@@ -27,8 +27,6 @@
             PING = 0x07
         }
 
-        public abstract uint GetMetadataLength();
-
         public abstract byte[] ToByteArray();
     }
 }
