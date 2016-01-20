@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuicDotNet.Test.Console", "QuicSharp.Test.Console\QuicDotNet.Test.Console.csproj", "{45BC577E-1612-423F-A212-9CF6CB347599}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuicDotNet.Test.Console", "QuicDotNet.Test.Console\QuicDotNet.Test.Console.csproj", "{45BC577E-1612-423F-A212-9CF6CB347599}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuicDotNet", "QuicDotNet\QuicDotNet.csproj", "{FAED49B1-C397-471D-95D1-DA034DAFEF22}"
 EndProject
