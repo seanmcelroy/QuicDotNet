@@ -18,8 +18,10 @@ namespace QuicDotNet.Packets
 
         private readonly ulong _packetNumber;
         private readonly byte? _fecGroup;
-        private readonly Dictionary<Frames.AbstractFrameBase, byte[]> _frames = new Dictionary<Frames.AbstractFrameBase, byte[]>(5);
-        private byte[] messageAuthenticationHash = null;
+        private readonly Dictionary<AbstractFrameBase, byte[]> _frames = new Dictionary<AbstractFrameBase, byte[]>(5);
+        public byte[] MessageAuthenticationHash { get; private set; }
+        private int? _headerLength;
+        private byte[] _finalBytes;
 
         public RegularPacket(ulong connectionId, ulong packetNumber, byte? fecGroup) : base(connectionId)
         {
@@ -31,6 +33,8 @@ namespace QuicDotNet.Packets
         {
             if (frame == null)
                 throw new ArgumentNullException(nameof(frame));
+            if (this._finalBytes != null)
+                throw new InvalidOperationException("Packet is already finalized");
 
             this._frames.Add(frame, null);
         }
@@ -40,24 +44,35 @@ namespace QuicDotNet.Packets
             return (uint)PublicHeader(QuicClient.QUIC_VERSION, this.ConnectionId, this._packetNumber).Length;
         }
 
-        public void PadAndNullEncrypt()
+        public byte[] PadAndNullEncrypt()
         {
+            if (this._finalBytes != null)
+                throw new InvalidOperationException("Packet is already finalized");
+
             var bytes = this.ToByteArray();
-            var padAmount = MTU - bytes.Length - 12;
+            var padAmount = MTU - bytes.Length;
 
             this.AddFrame(new PaddingFrame(padAmount));
             var paddedBytes = this.ToByteArray();
-            Debug.WriteLine(paddedBytes.GenerateHexDumpWithASCII());
 
-            this.messageAuthenticationHash = Fnv1A128Hash(paddedBytes);
+            var bytesToHash = new byte[paddedBytes.Length - 12];
+            Array.Copy(paddedBytes, 0, bytesToHash, 0, this._headerLength.Value);
+            Array.Copy(paddedBytes, this._headerLength.Value + 12, bytesToHash, this._headerLength.Value, bytesToHash.Length - this._headerLength.Value);
 
-            Debug.WriteLine("Message authentication hash: " + this.messageAuthenticationHash.Select(b => b.ToString("x2")).Aggregate((c,n)=>c+" "+n));
-            Debug.WriteLine(this.ToByteArray().GenerateHexDumpWithASCII());
+            this.MessageAuthenticationHash = Fnv1A128Hash(bytesToHash);
+            Array.Copy(this.MessageAuthenticationHash, 0, paddedBytes, this._headerLength.Value, this.MessageAuthenticationHash.Length);
+
+            this._finalBytes = paddedBytes;
+            return this._finalBytes;
         }
 
         public override byte[] ToByteArray()
         {
+            if (this._finalBytes != null)
+                return this._finalBytes;
+
             var header = PublicHeader(QuicClient.QUIC_VERSION, this.ConnectionId, this._packetNumber);
+            this._headerLength = header.Length;
 
             for (var i = 0; i < this._frames.Count; i++)
             {
@@ -68,18 +83,16 @@ namespace QuicDotNet.Packets
             var frameByteArrays = this._frames.Select(f => f.Value).ToArray();
             var frameByteCount = frameByteArrays.Sum(f => f.Length);
 
-            var bytes = new byte[header.Length + (this.messageAuthenticationHash == null ? 0 : 12) + (this._fecGroup == null ? 1 : 2) + frameByteCount];
+            var bytes = new byte[header.Length + 12 + (this._fecGroup == null ? 1 : 2) + frameByteCount];
 
             // Apply public header
             Array.Copy(header, 0, bytes, 0, header.Length);
             var next = header.Length;
 
             // Apply message authentication hash (only for null-encrypted)
-            if (this.messageAuthenticationHash != null)
-            {
-                Array.Copy(this.messageAuthenticationHash, 0, bytes, next, 12);
-                next += 12;
-            }
+            if (this.MessageAuthenticationHash != null)
+                Array.Copy(this.MessageAuthenticationHash, 0, bytes, next, 12);
+            next += 12;
 
             // Apply private header
             if (this._fecGroup == null)

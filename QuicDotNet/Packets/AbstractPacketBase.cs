@@ -11,7 +11,7 @@
 
     public abstract class AbstractPacketBase
     {
-        public const ushort MTU = 1370;
+        public const ushort MTU = 1350;
 
         public enum PacketType : byte
         {

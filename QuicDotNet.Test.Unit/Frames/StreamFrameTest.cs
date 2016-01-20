@@ -13,7 +13,7 @@
         [TestMethod]
         public void Stream1ClientInchoateGoogleCachedServerParametersClientMessage()
         {
-            var tags = Messages.ClientHandshakeMessageTest.ClientInchoateGoogleCachedServerParametersClientMessageSubsetParameters;
+            var tags = Messages.ClientHandshakeMessageTest.ClientInchoateGoogleCachedServerParametersClientMessageFactory.Value;
             var message2 = new ClientHandshakeMessage(tags);
             var messageBytes2 = message2.ToByteArray();
 
@@ -24,7 +24,6 @@
             Assert.IsNotNull(streamBytes);
             Debug.WriteLine(streamBytes.GenerateHexDumpWithASCII());
 
-            // TODO: ADD BACK
             //Assert.AreEqual(streamBytes.Length, FrameLibrary.ClientInchoateGoogleCachedServerParametersStream1Subset.Length);
 
             // Soft warn
