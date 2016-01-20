@@ -2,7 +2,7 @@
 {
     public abstract class AbstractFrameBase
     {
-        public enum FrameType : byte
+        protected enum FrameType : byte
         {
             STREAM = 0x80,
 

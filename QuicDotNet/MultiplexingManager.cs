@@ -20,10 +20,10 @@ namespace QuicDotNet
         private readonly bool _isServer;
 
         private readonly object _packetNumberLock = new object();
-        private ulong _packetNumber = 0;
+        private ulong _packetNumber;
 
         private readonly object _streamIdLock = new object();
-        private uint _currentStreamId = 0;
+        private uint _currentStreamId;
 
         private readonly object _dequeueLock = new object();
         

@@ -3,7 +3,6 @@
 namespace QuicDotNet.Packets
 {
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Linq;
 
     using JetBrains.Annotations;
@@ -56,6 +55,7 @@ namespace QuicDotNet.Packets
             var paddedBytes = this.ToByteArray();
 
             var bytesToHash = new byte[paddedBytes.Length - 12];
+            // ReSharper disable once PossibleInvalidOperationException
             Array.Copy(paddedBytes, 0, bytesToHash, 0, this._headerLength.Value);
             Array.Copy(paddedBytes, this._headerLength.Value + 12, bytesToHash, this._headerLength.Value, bytesToHash.Length - this._headerLength.Value);
 

@@ -5,6 +5,9 @@ using System.Text;
 
 namespace QuicDotNet.Messages
 {
+    using System.Runtime.Serialization;
+
+    [Serializable]
     public class ClientHandshakeMessage : Dictionary<uint, byte[]>
     {
         private static readonly byte[] _Chlo = Encoding.ASCII.GetBytes("CHLO");
@@ -13,6 +16,11 @@ namespace QuicDotNet.Messages
         {
         }
         public ClientHandshakeMessage(IDictionary<uint, byte[]> tagValuePairs) : base(tagValuePairs)
+        {
+        }
+
+        protected ClientHandshakeMessage(SerializationInfo info, StreamingContext context)
+            : base(info, context)
         {
         }
 

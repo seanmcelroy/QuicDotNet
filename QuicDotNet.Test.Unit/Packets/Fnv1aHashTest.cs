@@ -1,19 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace QuicDotNet.Test.Unit.Packets
+﻿namespace QuicDotNet.Test.Unit.Packets
 {
-    using System.Numerics;
-
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     [TestClass]
     public class Fnv1aHashTest
     {
         [TestMethod]
+        // ReSharper disable once InconsistentNaming
         public void ShortedFnv1a128HashInchoateClientHello()
         {
             var expected = new byte[] { 0xBB, 0x89, 0xF9, 0x07, 0x3C, 0x58, 0xB5, 0xB2, 0x14, 0x4B, 0x29, 0x48 };
