@@ -18,8 +18,13 @@ namespace QuicDotNet.Packets
         private readonly ulong _packetNumber;
         private readonly byte? _fecGroup;
         private readonly Dictionary<AbstractFrameBase, byte[]> _frames = new Dictionary<AbstractFrameBase, byte[]>(5);
+
+        [CanBeNull]
         public byte[] MessageAuthenticationHash { get; private set; }
-        private int? _headerLength;
+        [CanBeNull]
+        private byte[] HeaderBytes { get; set; }
+
+        [CanBeNull]
         private byte[] _finalBytes;
 
         public RegularPacket(ulong connectionId, ulong packetNumber, byte? fecGroup) : base(connectionId)
@@ -40,27 +45,36 @@ namespace QuicDotNet.Packets
 
         public uint GetHeaderLength()
         {
-            return (uint)PublicHeader(QuicClient.QUIC_VERSION, this.ConnectionId, this._packetNumber).Length;
+            if (this.HeaderBytes == null)
+                this.HeaderBytes = PublicHeader(QuicClient.QUIC_VERSION, this.ConnectionId, this._packetNumber);
+
+            return (uint)this.HeaderBytes.Length;
         }
 
         public byte[] PadAndNullEncrypt()
         {
             if (this._finalBytes != null)
                 throw new InvalidOperationException("Packet is already finalized");
+            if (this.HeaderBytes == null)
+                this.HeaderBytes = PublicHeader(QuicClient.QUIC_VERSION, this.ConnectionId, this._packetNumber);
 
             var bytes = this.ToByteArray();
             var padAmount = MTU - bytes.Length;
+            if (padAmount < 0)
+                throw new InvalidOperationException($"Packet is too large at {bytes.Length} bytes with the MTU limit of {MTU}");
 
-            this.AddFrame(new PaddingFrame(padAmount));
+            if (padAmount > 0)
+                this.AddFrame(new PaddingFrame(padAmount));
+
             var paddedBytes = this.ToByteArray();
 
             var bytesToHash = new byte[paddedBytes.Length - 12];
             // ReSharper disable once PossibleInvalidOperationException
-            Array.Copy(paddedBytes, 0, bytesToHash, 0, this._headerLength.Value);
-            Array.Copy(paddedBytes, this._headerLength.Value + 12, bytesToHash, this._headerLength.Value, bytesToHash.Length - this._headerLength.Value);
+            Array.Copy(paddedBytes, 0, bytesToHash, 0, this.HeaderBytes.Length);
+            Array.Copy(paddedBytes, this.HeaderBytes.Length + 12, bytesToHash, this.HeaderBytes.Length, bytesToHash.Length - this.HeaderBytes.Length);
 
             this.MessageAuthenticationHash = Fnv1A128Hash(bytesToHash);
-            Array.Copy(this.MessageAuthenticationHash, 0, paddedBytes, this._headerLength.Value, this.MessageAuthenticationHash.Length);
+            Array.Copy(this.MessageAuthenticationHash, 0, paddedBytes, this.HeaderBytes.Length, this.MessageAuthenticationHash.Length);
 
             this._finalBytes = paddedBytes;
             return this._finalBytes;
@@ -70,9 +84,8 @@ namespace QuicDotNet.Packets
         {
             if (this._finalBytes != null)
                 return this._finalBytes;
-
-            var header = PublicHeader(QuicClient.QUIC_VERSION, this.ConnectionId, this._packetNumber);
-            this._headerLength = header.Length;
+            if (this.HeaderBytes == null)
+                this.HeaderBytes = PublicHeader(QuicClient.QUIC_VERSION, this.ConnectionId, this._packetNumber);
 
             for (var i = 0; i < this._frames.Count; i++)
             {
@@ -83,11 +96,11 @@ namespace QuicDotNet.Packets
             var frameByteArrays = this._frames.Select(f => f.Value).ToArray();
             var frameByteCount = frameByteArrays.Sum(f => f.Length);
 
-            var bytes = new byte[header.Length + 12 + (this._fecGroup == null ? 1 : 2) + frameByteCount];
+            var bytes = new byte[this.HeaderBytes.Length + 12 + (this._fecGroup == null ? 1 : 2) + frameByteCount];
 
             // Apply public header
-            Array.Copy(header, 0, bytes, 0, header.Length);
-            var next = header.Length;
+            Array.Copy(this.HeaderBytes, 0, bytes, 0, this.HeaderBytes.Length);
+            var next = this.HeaderBytes.Length;
 
             // Apply message authentication hash (only for null-encrypted)
             if (this.MessageAuthenticationHash != null)

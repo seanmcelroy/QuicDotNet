@@ -27,7 +27,8 @@
 
         protected ulong ConnectionId { get; private set; }
 
-        public static byte[] Fnv1A128Hash(byte[] bytes)
+        [NotNull, Pure]
+        public static byte[] Fnv1A128Hash([NotNull] byte[] bytes)
         {
             var modValue = BigInteger.Parse("100000000000000000000000000000000", NumberStyles.AllowHexSpecifier);
             var fnvPrime = BigInteger.Parse("0000000001000000000000000000013B", NumberStyles.AllowHexSpecifier);
@@ -48,6 +49,7 @@
             return hash.ToByteArray().Take(12).ToArray();
         }
 
+        [Pure, NotNull]
         protected static byte[] PublicHeader([CanBeNull] string version, ulong? connectionId, ulong packetNumber)
         {
             // Packet number

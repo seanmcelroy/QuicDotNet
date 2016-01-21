@@ -51,6 +51,7 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="Client\QuicClientTest.cs" />
     <Compile Include="Frames\FrameLibrary.cs" />
     <Compile Include="Messages\ClientHandshakeMessageTest.cs" />
     <Compile Include="Messages\MessageLibrary.cs" />
