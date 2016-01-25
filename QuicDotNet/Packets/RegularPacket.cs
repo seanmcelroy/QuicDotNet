@@ -12,25 +12,35 @@ namespace QuicDotNet.Packets
     public class RegularPacket : AbstractPacketBase
     {
         public const byte PRIVATE_FLAG_ENTROPY = 0x01;
+
         public const byte PRIVATE_FLAG_FEC_GROUP = 0x02;
+
         public const byte PRIVATE_FLAG_FEC = 0x04;
 
         private readonly ulong _packetNumber;
-        private readonly byte? _fecGroup;
+
+        public bool Entropy { get; private set; }
+
+        public byte? FecGroup { get; private set; }
+
         private readonly Dictionary<AbstractFrameBase, byte[]> _frames = new Dictionary<AbstractFrameBase, byte[]>(5);
 
         [CanBeNull]
         public byte[] MessageAuthenticationHash { get; private set; }
+
+        public ulong PacketNumber => this._packetNumber;
+
         [CanBeNull]
         private byte[] HeaderBytes { get; set; }
 
         [CanBeNull]
         private byte[] _finalBytes;
 
-        public RegularPacket(ulong connectionId, ulong packetNumber, byte? fecGroup) : base(connectionId)
+        public RegularPacket(ulong? connectionId, ulong packetNumber, byte? fecGroup)
+            : base(connectionId)
         {
             this._packetNumber = packetNumber;
-            this._fecGroup = fecGroup;
+            this.FecGroup = fecGroup;
         }
 
         public void AddFrame([NotNull] AbstractFrameBase frame)
@@ -69,7 +79,7 @@ namespace QuicDotNet.Packets
             var paddedBytes = this.ToByteArray();
 
             var bytesToHash = new byte[paddedBytes.Length - 12];
-            // ReSharper disable once PossibleInvalidOperationException
+            // ReSharper disable once PossibleNullReferenceException
             Array.Copy(paddedBytes, 0, bytesToHash, 0, this.HeaderBytes.Length);
             Array.Copy(paddedBytes, this.HeaderBytes.Length + 12, bytesToHash, this.HeaderBytes.Length, bytesToHash.Length - this.HeaderBytes.Length);
 
@@ -78,6 +88,57 @@ namespace QuicDotNet.Packets
 
             this._finalBytes = paddedBytes;
             return this._finalBytes;
+        }
+
+        protected internal void FromByteArray([NotNull] byte[] bytes)
+        {
+            var index = 0;
+
+            // Message authentication hash
+            if (this.PacketNumber == 1)
+            {
+                // First 12 bytes are the message authentication hash
+                this.MessageAuthenticationHash = new byte[12];
+                Array.Copy(bytes, this.MessageAuthenticationHash, 12);
+                index += 12;
+            }
+
+            // Private header
+            this.Entropy = (bytes[index] & (1 << 0)) != 0;
+            if ((bytes[index] & (1 << 2)) != 0)
+            {
+                // https://tools.ietf.org/html/draft-tsvwg-quic-protocol-02#section-6.1
+                throw new NotImplementedException("This implementation does not yet handle FLAG_FEC");
+            }
+
+            if ((bytes[index] & (1 << 1)) != 0)
+            {
+                index++;
+                this.FecGroup = bytes[index];
+            }
+            index++;
+
+            // Decode frames
+            while (index < bytes.Length)
+            {
+                // PADDING frame
+                if (bytes[index] == 0)
+                {
+                    this.AddFrame(new PaddingFrame(bytes.Length - index));
+                    break;
+                }
+
+                // STREAM frame
+                if ((bytes[index] & (1 << 7)) != 0)
+                {
+                    var sf = StreamFrame.FromByteArray(bytes, index);
+                    this.AddFrame(sf.Item1);
+                    index = sf.Item2;
+                }
+            }
+
+            Console.WriteLine("Decoding frame");
+
         }
 
         public override byte[] ToByteArray()
@@ -96,7 +157,7 @@ namespace QuicDotNet.Packets
             var frameByteArrays = this._frames.Select(f => f.Value).ToArray();
             var frameByteCount = frameByteArrays.Sum(f => f.Length);
 
-            var bytes = new byte[this.HeaderBytes.Length + 12 + (this._fecGroup == null ? 1 : 2) + frameByteCount];
+            var bytes = new byte[this.HeaderBytes.Length + 12 + (this.FecGroup == null ? 1 : 2) + frameByteCount];
 
             // Apply public header
             Array.Copy(this.HeaderBytes, 0, bytes, 0, this.HeaderBytes.Length);
@@ -108,12 +169,12 @@ namespace QuicDotNet.Packets
             next += 12;
 
             // Apply private header
-            if (this._fecGroup == null)
+            if (this.FecGroup == null)
                 next++;
             else
             {
                 bytes[next] ^= PRIVATE_FLAG_FEC_GROUP;
-                bytes[next + 1] = this._fecGroup.Value;
+                bytes[next + 1] = this.FecGroup.Value;
                 next += 2;
             }
 

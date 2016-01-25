@@ -8,6 +8,10 @@ namespace QuicDotNet.Frames
 
     public class StreamFrame : AbstractFrameBase
     {
+        private StreamFrame()
+        {
+        }
+
         /// <summary>
         /// Creates a PROTOTYPE stream frame with a block of data to send for the stream
         /// A prototype frame can only service the <see cref="StreamFrame.GetMetadataLength"/> method until it is hydrated with the <see cref="StreamFrame.SetData(byte[], bool)"/> method
@@ -42,17 +46,17 @@ namespace QuicDotNet.Frames
 
         private bool Fin { get; set; }
 
-        private readonly uint _streamId;
+        private uint _streamId;
 
         private readonly ulong _offset;
 
-        private uint? _metadataLength;
+        private int? _metadataLength;
 
         private byte? _slen;
 
         private byte? _olen;
 
-        public uint GetMetadataLength()
+        public int GetMetadataLength()
         {
             if (this._streamId <= byte.MaxValue)
                 this._slen = 0x00;
@@ -81,7 +85,7 @@ namespace QuicDotNet.Frames
                 this._olen = 0x07;
 
             // INFO: We're going to just always send data length (+2)
-            this._metadataLength = 1U + (this._slen.Value + 1U) * 8 + (this._olen.Value == 0 ? 0 : (this._olen.Value + 1U) * 8) + 2U;
+            this._metadataLength = 1 + (this._slen.Value + 1) * 8 + (this._olen.Value == 0 ? 0 : (this._olen.Value + 1) * 8) + 2;
             return this._metadataLength.Value;
         }
 
@@ -100,6 +104,50 @@ namespace QuicDotNet.Frames
             this._metadataLength = null;
             this._slen = null;
             this._olen = null;
+        }
+
+        public static Tuple<StreamFrame, int> FromByteArray(byte[] bytes, int index)
+        {
+            var finFlag = (bytes[index] & (1 << 6)) != 0;
+            var dataLengthFlag = (bytes[index] & (1 << 5)) != 0;
+            var olenIndex = (bytes[index] >> 2) & 7;
+
+            var frame = new StreamFrame
+                        {
+                            Fin = finFlag,
+                            _olen = (byte)(olenIndex == 0 ? 0 : olenIndex + 1),
+                            _slen = (byte)(bytes[index] & 3)
+                        };
+
+            switch (frame._slen)
+            {
+                case 0:
+                    frame._streamId = bytes[index + 1];
+                    break;
+                case 1:
+                    frame._streamId = BitConverter.ToUInt16(bytes, index + 1);
+                    break;
+                case 2:
+                    var buf = new byte[4];
+                    Array.Copy(bytes, index + 1, buf, 1, 3);
+                    frame._streamId = BitConverter.ToUInt32(buf,0);
+                    break;
+                case 3:
+                    frame._streamId = BitConverter.ToUInt32(bytes, index + 1);
+                    break;
+            }
+
+            // ReSharper disable PossibleInvalidOperationException
+            frame._metadataLength = 1 + (frame._slen.Value + 1) + (frame._olen.Value == 0 ? 0 : frame._olen.Value + 1) + (dataLengthFlag ? 2 : 0);
+            // ReSharper restore PossibleInvalidOperationException
+
+            index += frame._metadataLength.Value;
+            var dataLength = dataLengthFlag ? BitConverter.ToUInt16(bytes, index - 2) : bytes.Length - index - 1;
+            frame._data = new byte[dataLength];
+            Array.Copy(bytes, index, frame._data, 0, dataLength);
+            index += dataLength;
+
+            return new Tuple<StreamFrame, int>(frame, index);
         }
 
         public override byte[] ToByteArray()

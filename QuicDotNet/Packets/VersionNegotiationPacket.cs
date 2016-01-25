@@ -17,7 +17,8 @@ namespace QuicDotNet.Packets
 
             packet[0] |= 0x01;
 
-            var cidBytes = BitConverter.GetBytes(this.ConnectionId);
+            // ReSharper disable once PossibleInvalidOperationException
+            var cidBytes = BitConverter.GetBytes(this.ConnectionId.Value);
             Array.Copy(cidBytes, 0, packet, 1, 8);
 
             var next = 9;

@@ -13,19 +13,34 @@
     {
         public const ushort MTU = 1350;
 
-        public enum PacketType : byte
+        public enum PublicFlags : byte
         {
-            VERSION_NEGOTIATION = 0x01,
-            PUBLIC_RESET = 0x02,
-            REGULAR = 0x04
+            /// <summary>
+            /// Interpretation of this flag
+            /// depends on whether the packet is sent by the server or the
+            /// client.  When sent by the client, setting it indicates that the
+            /// header contains a QUIC Version (see below).  This bit must be
+            /// set by a client in all packets until confirmation from the
+            /// server arrives agreeing to the proposed version is received by
+            /// the client.  A server indicates agreement on a version by
+            /// sending packets without setting this bit.  When this bit is set
+            /// by the server, the packet is a Version Negotiation Packet.
+            /// Version Negotiation is described in more detail later.
+            /// <seealso cref="https://tools.ietf.org/html/draft-tsvwg-quic-protocol-02#section-6.1"/>
+            /// </summary>
+            PUBLIC_FLAG_VERSION = 0x01,
+            /// <summary>
+            /// Set to indicate that the packet is a Public Reset packet.
+            /// </summary>
+            PUBLIC_FLAG_RESET = 0x02
         }
 
-        protected AbstractPacketBase(ulong connectionId)
+        protected AbstractPacketBase(ulong? connectionId)
         {
             this.ConnectionId = connectionId;
         }
 
-        protected ulong ConnectionId { get; private set; }
+        public ulong? ConnectionId { get; private set; }
 
         [NotNull, Pure]
         public static byte[] Fnv1A128Hash([NotNull] byte[] bytes)
@@ -121,7 +136,77 @@
 
             return header;
         }
-
+        
         public abstract byte[] ToByteArray();
+
+        public static bool TryParse(byte[] packetBytes, out AbstractPacketBase packet)
+        {
+            var publicFlags = packetBytes[0];
+            var index = 1;
+            var versionFlag = (publicFlags & (1 << 0)) != 0;
+            var resetFlag = (publicFlags & (1 << 1)) != 0;
+            var cidFlag1 = (publicFlags & (1 << 2)) != 0;
+            var cidFlag2 = (publicFlags & (1 << 3)) != 0;
+            var pnFlag1 = (publicFlags & (1 << 4)) != 0;
+            var pnFlag2 = (publicFlags & (1 << 5)) != 0;
+
+            ulong? connectionId;
+            if (cidFlag1 && cidFlag2)
+            {
+                connectionId = BitConverter.ToUInt64(packetBytes, index);
+                index += 8;
+            }
+            else if (!cidFlag1 && cidFlag2)
+            {
+                connectionId = BitConverter.ToUInt32(packetBytes, index);
+                index += 4;
+            }
+            else if (cidFlag1)
+            {
+                connectionId = packetBytes[1];
+                index += 1;
+            }
+            else
+                connectionId = null;
+
+            uint? version;
+            if (versionFlag)
+            {
+                version = BitConverter.ToUInt32(packetBytes, index);
+                index += 4;
+            }
+
+            ulong packetNumber;
+            if (pnFlag1 && pnFlag2)
+            {
+                var ba = new byte[8];
+                Array.Copy(packetBytes, index, ba, 2, 6);
+                packetNumber = BitConverter.ToUInt64(ba, 0);
+                index += 6;
+            }
+            else if (!pnFlag1 && pnFlag2)
+            {
+                packetNumber = BitConverter.ToUInt32(packetBytes, index);
+                index += 4;
+            }
+            else if (pnFlag1)
+            {
+                packetNumber = BitConverter.ToUInt16(packetBytes, index);
+                index += 2;
+            }
+            else
+            {
+                packetNumber = packetBytes[index];
+                index += 1;
+            }
+
+            var rp = new RegularPacket(connectionId, packetNumber, null);
+            var payloadBytes = new byte[packetBytes.Length - index];
+            Array.Copy(packetBytes, index, payloadBytes, 0, payloadBytes.Length);
+            rp.FromByteArray(payloadBytes);
+            packet = rp;
+
+            return true;
+        }
     }
 }
